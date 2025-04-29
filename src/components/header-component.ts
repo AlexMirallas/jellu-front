@@ -1,14 +1,13 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
+import { consume } from '@lit/context'; // Import from @lit/context
+import { authContext, AuthContextData  } from '../contexts/auth-context.ts'; // Import context
 
 @customElement('header-component')
 export class HeaderComponent extends LitElement {
-  // --- Properties ---
-  // These would typically be passed down from a parent component (like my-app)
-  // or managed by a state management solution.
-  @property({ type: Boolean }) isLoggedIn = false; // Default to logged out
-  @property({ type: String }) username = 'User';
-  @property({ type: String }) avatarUrl = 'https://via.placeholder.com/40'; // Placeholder avatar
+  @consume({ context: authContext, subscribe: true }) // Corrected typo: subscribe
+  @property({attribute: false})
+  private _authData?: AuthContextData;
 
   // --- Styles ---
   static styles = css`
@@ -129,6 +128,11 @@ export class HeaderComponent extends LitElement {
 
   // --- Template ---
   render() {
+
+    const isLoggedIn = this._authData?.isLoggedIn ?? false;
+    const username = this._authData?.username ?? 'User';
+    const avatarUrl = 'https://placehold.co/40';
+
     return html`
       <header>
         <!-- Left Section: Logo + Name -->
@@ -150,16 +154,16 @@ export class HeaderComponent extends LitElement {
           />
         </div>
 
-        <!-- Right Section: Auth/User Info -->
+        <!-- Right Section: Use consumed context data -->
         <div class="header-right">
-          ${this.isLoggedIn
+          ${isLoggedIn
             ? html`
                 <button class="icon-button notifications-button" @click=${this._handleNotificationsClick} title="Notifications"></button>
                 <button class="icon-button chat-button" @click=${this._handleChatClick} title="Chat"></button>
                 <div class="user-info" @click=${this._handleUserMenuClick}>
-                  <img src=${this.avatarUrl} alt="User Avatar" class="avatar">
-                  <span class="username">${this.username}</span>
-                  <!-- Add dropdown icon later? -->
+                  <img src=${avatarUrl} alt="User Avatar" class="avatar">
+                  <span class="username">${username}</span>
+                  <button @click=${this._handleLogoutClick}>Logout</button> 
                 </div>
               `
             : html`
@@ -184,7 +188,7 @@ export class HeaderComponent extends LitElement {
 
   private _handleSearchInput(e: InputEvent) {
     const query = (e.target as HTMLInputElement).value;
-    // console.log('Search query:', query);
+    console.log('Search query:', query);
     // Implement search logic or dispatch event
   }
 
@@ -197,8 +201,16 @@ export class HeaderComponent extends LitElement {
   }
 
   private _handleLoginClick() {
-    // Dispatch event for the parent component (my-app) to handle
+    // Still dispatch event for my-app to open the modal
     this.dispatchEvent(new CustomEvent('open-login-modal', { bubbles: true, composed: true }));
+  }
+
+  private _handleLogoutClick() {
+    // Option 1: Call the logout function directly from the context
+    this._authData?.logout();
+
+    // Option 2: Dispatch an event for the provider (my-app) to handle
+    // this.dispatchEvent(new CustomEvent('logout-request', { bubbles: true, composed: true }));
   }
 
   private _handleNotificationsClick() {

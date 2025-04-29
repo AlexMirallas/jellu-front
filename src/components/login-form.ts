@@ -32,6 +32,48 @@ export class LoginForm extends LitElement {
     }
   `;
 
+  private async _handleSubmit(e: Event) {
+    e.preventDefault();
+    this.errorMessage = ''; // Clear previous errors
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          username: this.username, 
+          password: this.password,
+        }),
+      });
+
+      const data = await response.json(); // Always try to parse JSON
+
+      if (!response.ok) {
+        this.errorMessage = data.message || 'Login failed';
+        return;
+      }
+
+      console.log('Login successful:', data);
+
+      // --- Dispatch success event with user data ---
+      this.dispatchEvent(new CustomEvent('login-success', {
+        detail: {
+          // Assuming the backend login response includes user info
+          // Adjust based on your actual API response structure
+          user: data.user || { username: this.username /* fallback */ }
+        },
+        bubbles: true,
+        composed: true,
+      }));
+      // --- ---
+
+    } catch (error) {
+      console.error('Error during login:', error);
+      this.errorMessage = 'An error occurred. Please try again.';
+    }
+  }
+
   render() {
     return html`
       <form @submit=${this._handleSubmit}>
@@ -50,39 +92,6 @@ export class LoginForm extends LitElement {
         <button type="submit">Login</button>
       </form>
     `;
-  }
-
-   private async _handleSubmit(e: Event) {
-    e.preventDefault();
-    console.log('Logging in with:', { username: this.username, password: this.password });
-    try {
-        const response = await fetch('http://localhost:3000/auth/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include', // Include cookies in the request
-          body: JSON.stringify({
-            username: this.username,
-            password: this.password,
-          }),
-        });
-  
-        if (!response.ok) {
-          const error = await response.json();
-          this.errorMessage = error.message || 'Login failed';
-          return;
-        }
-  
-        const data = await response.json();
-        console.log('Login successful:', data);
-        this.errorMessage = '';
-  // Redirect or update UI after successful login
-      } catch (error) {
-        console.error('Error during login:', error);
-        this.errorMessage = 'An error occurred. Please try again.';
-      }
-    // Add logic to send login request to the backend
   }
 }
 
